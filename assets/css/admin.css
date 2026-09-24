@@ -1,0 +1,61 @@
+.gobear-design-cell {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.gobear-status {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	background: #f0f0f1;
+}
+
+.gobear-status-pending {
+	background: #fff3cd;
+	color: #7a5b00;
+}
+
+.gobear-status-sent,
+.gobear-status-in_production {
+	background: #d6e9ff;
+	color: #0a4b91;
+}
+
+.gobear-status-completed {
+	background: #d7f3df;
+	color: #14622f;
+}
+
+.gobear-status-failed {
+	background: #fbe0e0;
+	color: #8a1f1f;
+}
+
+.gobear-status-refunded,
+.gobear-status-cancelled {
+	background: #eee;
+	color: #555;
+}
+
+.gobear-fulfill-summary {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+	margin: 16px 0;
+}
+
+.gobear-fulfill-summary img {
+	border-radius: 6px;
+	border: 1px solid #ddd;
+}
+
+.gobear-no-stock {
+	color: #b32d2e;
+}
+
+.gobear-order-box ul {
+	margin: 0.5em 0 0;
+}
