@@ -65,16 +65,17 @@ class Gobear_Client {
 			return new WP_Error( 'gobear_not_configured', __( 'Gobear App Key/Secret are not configured.', 'gobear-personalization' ) );
 		}
 
+		// Gobear's API only parses standard form-encoded bodies, not raw JSON — confirmed against
+		// the live endpoint (a JSON body behaves identically to an empty one: "missing param
+		// app_key"). Passing an array as 'body' makes WP_Http encode it as
+		// application/x-www-form-urlencoded automatically.
 		$response = wp_remote_post(
 			$this->get_base_url() . '/openapi/auth/bearer',
 			array(
 				'timeout' => 20,
-				'headers' => array( 'Content-Type' => 'application/json' ),
-				'body'    => wp_json_encode(
-					array(
-						'app_key'    => $this->get_app_key(),
-						'app_secret' => $this->get_app_secret(),
-					)
+				'body'    => array(
+					'app_key'    => $this->get_app_key(),
+					'app_secret' => $this->get_app_secret(),
 				),
 			)
 		);
@@ -106,7 +107,7 @@ class Gobear_Client {
 	 *
 	 * @param string $method       GET|POST.
 	 * @param string $path         API path, e.g. '/openapi/phone/list' or a driver-prefixed path.
-	 * @param array  $params       For GET: query args. For POST: JSON body fields.
+	 * @param array  $params       For GET: query args. For POST: form-encoded body fields.
 	 * @param bool   $is_retry     Internal flag to prevent infinite retry loops.
 	 * @return array|WP_Error      Decoded `data` payload on success.
 	 */
@@ -132,8 +133,8 @@ class Gobear_Client {
 				$url .= ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $params );
 			}
 		} else {
-			$args['headers']['Content-Type'] = 'application/json';
-			$args['body']                    = wp_json_encode( $params );
+			// See the note in refresh_token(): Gobear's API expects form-encoded bodies, not JSON.
+			$args['body'] = $params;
 		}
 
 		$response = wp_remote_request( $url, $args );
