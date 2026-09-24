@@ -115,6 +115,10 @@
 	position: relative;
 	width: 100%;
 	max-width: 360px;
+	/* Every child (phone bg, template, placeholder) is position:absolute, so none of them
+	 * contribute height back to this box — without an explicit ratio it collapses to 0px tall
+	 * and overflow:hidden clips everything inside, even once images load correctly. */
+	aspect-ratio: 9 / 18;
 	margin: 0 auto;
 	overflow: hidden;
 	background: #f3f3f3;
