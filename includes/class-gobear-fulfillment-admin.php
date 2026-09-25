@@ -26,6 +26,24 @@ class Gobear_Fulfillment_Admin {
 		add_action( 'wp_ajax_gobear_send_to_device', array( $this, 'ajax_send_to_device' ) );
 		add_action( 'wp_ajax_gobear_mark_complete', array( $this, 'ajax_mark_complete' ) );
 		add_action( 'wp_ajax_gobear_refresh_status', array( $this, 'ajax_refresh_status' ) );
+
+		add_action( 'admin_post_gobear_backfill_fulfillments', array( $this, 'handle_backfill' ) );
+	}
+
+	/**
+	 * "Scan for missing orders" button on the queue page: creates fulfillment rows for existing
+	 * personalized orders that never got one, then redirects back with the result.
+	 */
+	public function handle_backfill() {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do this.', 'gobear-personalization' ), 403 );
+		}
+		check_admin_referer( 'gobear_backfill_fulfillments' );
+
+		$created = ( new Gobear_Order_Integration() )->backfill_fulfillment_rows();
+
+		wp_safe_redirect( add_query_arg( 'gobear_backfilled', $created, admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) );
+		exit;
 	}
 
 	public function add_menu() {
@@ -86,7 +104,26 @@ class Gobear_Fulfillment_Admin {
 		$counts = $table->get_status_counts();
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Gobear Fulfillment Queue', 'gobear-personalization' ); ?></h1>
+			<h1 class="wp-heading-inline"><?php esc_html_e( 'Gobear Fulfillment Queue', 'gobear-personalization' ); ?></h1>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+				<input type="hidden" name="action" value="gobear_backfill_fulfillments" />
+				<?php wp_nonce_field( 'gobear_backfill_fulfillments' ); ?>
+				<button type="submit" class="page-title-action"><?php esc_html_e( 'Scan for missing orders', 'gobear-personalization' ); ?></button>
+			</form>
+			<hr class="wp-header-end" />
+			<?php if ( isset( $_GET['gobear_backfilled'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<?php $backfilled = absint( $_GET['gobear_backfilled'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-success is-dismissible"><p>
+					<?php
+					echo esc_html(
+						$backfilled
+							/* translators: %d: number of fulfillment rows created. */
+							? sprintf( _n( 'Added %d missing personalized item to the queue.', 'Added %d missing personalized items to the queue.', $backfilled, 'gobear-personalization' ), $backfilled )
+							: __( 'No missing personalized orders found.', 'gobear-personalization' )
+					);
+					?>
+				</p></div>
+			<?php endif; ?>
 			<ul class="subsubsub">
 				<?php
 				$base = admin_url( 'admin.php?page=' . self::MENU_SLUG );

@@ -83,7 +83,7 @@ class Gobear_Order_Integration {
 	 */
 	public function create_fulfillment_rows( $order ) {
 		if ( ! $order instanceof WC_Order ) {
-			return;
+			return 0;
 		}
 
 		global $wpdb;
@@ -147,5 +147,40 @@ class Gobear_Order_Integration {
 				)
 			);
 		}
+
+		return $created;
+	}
+
+	/**
+	 * Creates the missing fulfillment rows for existing orders whose personalized items never got
+	 * one (e.g. orders placed through the Checkout block before it was hooked). Order items live in
+	 * the same tables under both legacy and HPOS storage, so they can be queried directly.
+	 *
+	 * @return int Number of fulfillment rows created.
+	 */
+	public function backfill_fulfillment_rows() {
+		global $wpdb;
+		$fulfillments_table = $wpdb->prefix . 'gobear_fulfillments';
+
+		$order_ids = $wpdb->get_col(
+			"SELECT DISTINCT oi.order_id
+			FROM {$wpdb->prefix}woocommerce_order_items oi
+			INNER JOIN {$wpdb->prefix}woocommerce_order_itemmeta oim
+				ON oim.order_item_id = oi.order_item_id AND oim.meta_key = '_gobear_design_id'
+			LEFT JOIN {$fulfillments_table} f ON f.order_item_id = oi.order_item_id
+			WHERE f.id IS NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		$created = 0;
+		foreach ( $order_ids as $order_id ) {
+			$order = wc_get_order( $order_id );
+			// Skip unsubmitted Checkout block drafts and trashed orders — neither is a real order to fulfill.
+			if ( ! $order || in_array( $order->get_status(), array( 'checkout-draft', 'trash' ), true ) ) {
+				continue;
+			}
+			$created += $this->create_fulfillment_rows( $order );
+		}
+
+		return $created;
 	}
 }
