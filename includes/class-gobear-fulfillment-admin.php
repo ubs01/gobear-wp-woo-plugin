@@ -46,6 +46,24 @@ class Gobear_Fulfillment_Admin {
 		exit;
 	}
 
+	/**
+	 * Why an item on this order can't be dispatched to a device right now, or '' if it can.
+	 * Cancelled, on-hold and deleted (trashed or permanently removed) orders are blocked.
+	 *
+	 * @param WC_Order|false $order
+	 * @return string
+	 */
+	public static function get_fulfill_block_reason( $order ) {
+		if ( ! $order || $order->has_status( 'trash' ) ) {
+			return __( 'Order deleted', 'gobear-personalization' );
+		}
+		if ( $order->has_status( array( 'cancelled', 'on-hold' ) ) ) {
+			/* translators: %s: order status name, e.g. "Cancelled". */
+			return sprintf( __( 'Order is %s', 'gobear-personalization' ), wc_get_order_status_name( $order->get_status() ) );
+		}
+		return '';
+	}
+
 	public function add_menu() {
 		add_submenu_page(
 			Gobear_Settings::MENU_SLUG,
@@ -190,7 +208,15 @@ class Gobear_Fulfillment_Admin {
 				</table>
 			</div>
 
-			<?php if ( in_array( $fulfillment->status, array( 'pending', 'failed' ), true ) ) : ?>
+			<?php $block_reason = self::get_fulfill_block_reason( $order ); ?>
+			<?php if ( in_array( $fulfillment->status, array( 'pending', 'failed' ), true ) && $block_reason ) : ?>
+				<div class="notice notice-warning inline"><p>
+					<?php
+					/* translators: %s: reason, e.g. "Order is Cancelled". */
+					echo esc_html( sprintf( __( 'This item can\'t be fulfilled: %s.', 'gobear-personalization' ), $block_reason ) );
+					?>
+				</p></div>
+			<?php elseif ( in_array( $fulfillment->status, array( 'pending', 'failed' ), true ) ) : ?>
 				<h2><?php esc_html_e( 'Choose a device', 'gobear-personalization' ); ?></h2>
 				<div id="gobear-device-picker" data-fulfillment-id="<?php echo esc_attr( $fulfillment->id ); ?>" data-machine-type="<?php echo esc_attr( $fulfillment->machine_type ); ?>" data-sku-id="<?php echo esc_attr( $design->sku_id ); ?>">
 					<p class="gobear-device-loading"><?php esc_html_e( 'Loading devices…', 'gobear-personalization' ); ?></p>
@@ -340,6 +366,13 @@ class Gobear_Fulfillment_Admin {
 			wp_send_json_error( array( 'message' => __( 'This item has already been sent to a device.', 'gobear-personalization' ) ) );
 		}
 
+		$order        = wc_get_order( $fulfillment->order_id );
+		$block_reason = self::get_fulfill_block_reason( $order );
+		if ( $block_reason ) {
+			/* translators: %s: reason, e.g. "Order is Cancelled". */
+			wp_send_json_error( array( 'message' => sprintf( __( 'This item can\'t be fulfilled: %s.', 'gobear-personalization' ), $block_reason ) ) );
+		}
+
 		global $wpdb;
 		$design = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}gobear_designs WHERE id = %d", $fulfillment->design_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! $design || ! $design->print_attachment_id || ! $design->rendering_attachment_id ) {
@@ -389,7 +422,6 @@ class Gobear_Fulfillment_Admin {
 			array( '%d' )
 		);
 
-		$order = wc_get_order( $fulfillment->order_id );
 		if ( $order ) {
 			$order->add_order_note(
 				sprintf(
@@ -399,7 +431,7 @@ class Gobear_Fulfillment_Admin {
 					isset( $result['order_sn'] ) ? $result['order_sn'] : ''
 				)
 			);
-			if ( $order->has_status( array( 'processing', 'on-hold' ) ) ) {
+			if ( $order->has_status( 'processing' ) ) {
 				$order->update_status( 'personalizing' );
 			}
 		}

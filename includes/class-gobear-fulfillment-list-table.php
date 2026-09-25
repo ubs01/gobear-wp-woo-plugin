@@ -163,6 +163,14 @@ class Gobear_Fulfillment_List_Table extends WP_List_Table {
 		$base_url = admin_url( 'admin.php?page=' . Gobear_Fulfillment_Admin::MENU_SLUG );
 
 		if ( 'pending' === $item['status'] || 'failed' === $item['status'] ) {
+			$block_reason = Gobear_Fulfillment_Admin::get_fulfill_block_reason( wc_get_order( $item['order_id'] ) );
+			if ( $block_reason ) {
+				return sprintf(
+					'<button type="button" class="button" disabled="disabled">%s</button><br /><span class="description">%s</span>',
+					esc_html__( 'Fulfill', 'gobear-personalization' ),
+					esc_html( $block_reason )
+				);
+			}
 			return sprintf(
 				'<a class="button button-primary" href="%s">%s</a>',
 				esc_url( add_query_arg( array( 'action' => 'fulfill', 'id' => $item['id'] ), $base_url ) ),
