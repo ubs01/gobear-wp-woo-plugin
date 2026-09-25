@@ -22,6 +22,8 @@ class Gobear_Order_Integration {
 
 		add_action( 'woocommerce_checkout_create_order_line_item', array( $this, 'add_order_item_meta' ), 10, 4 );
 		add_action( 'woocommerce_checkout_order_created', array( $this, 'create_fulfillment_rows' ) );
+		// The Checkout block (Store API) never fires the classic hook above.
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'create_fulfillment_rows' ) );
 	}
 
 	public function register_order_status() {
@@ -74,7 +76,8 @@ class Gobear_Order_Integration {
 	}
 
 	/**
-	 * Fires once the order (and its items, with real item IDs) has been saved. Creates one
+	 * Fires once the order (and its items, with real item IDs) has been saved — from either the
+	 * classic checkout or the Checkout block. Creates one
 	 * "pending" fulfillment row per personalized line item — this is the hold point: nothing is
 	 * sent to Gobear until staff act on it in the Fulfillment Queue.
 	 */
