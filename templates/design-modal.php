@@ -64,10 +64,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 						</button>
 						<span class="gobear-saving-indicator" hidden><?php esc_html_e( 'Saving your design…', 'gobear-personalization' ); ?></span>
 					</p>
+					<img class="gobear-phone-image" alt="" hidden />
 				</div>
 				<div class="gobear-modal-preview">
 					<div class="gobear-preview-box">
-						<img class="gobear-preview-phone-bg" alt="" />
 						<img class="gobear-preview-photo" alt="" hidden />
 						<img class="gobear-preview-template" alt="" />
 						<p class="gobear-preview-placeholder"><?php esc_html_e( 'Choose a phone model to begin.', 'gobear-personalization' ); ?></p>

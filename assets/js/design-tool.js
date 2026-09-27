@@ -62,7 +62,7 @@
 		var editBtn      = qs( root, '.gobear-edit-design' );
 
 		var previewBox   = qs( root, '.gobear-preview-box' );
-		var previewPhone = qs( root, '.gobear-preview-phone-bg' );
+		var phoneImage   = qs( root, '.gobear-phone-image' );
 		var previewPhoto = qs( root, '.gobear-preview-photo' );
 		var previewTemplate = qs( root, '.gobear-preview-template' );
 		var previewPlaceholder = qs( root, '.gobear-preview-placeholder' );
@@ -84,6 +84,7 @@
 		};
 		var dragging = false;
 		var dragStart = null;
+		var templateRequest = 0; // Ignores a template that finishes loading after the SKU changed.
 
 		function showError( msg ) {
 			if ( ! errorEl ) {
@@ -162,14 +163,14 @@
 
 			if ( ! currentModel ) {
 				setHidden( materialField, true );
-				previewPhone.src = '';
-				previewTemplate.src = '';
+				setPhoneImage( '' );
+				applySkuTemplate();
 				setHidden( previewPlaceholder, false );
 				updateConfirmState();
 				return;
 			}
 
-			previewPhone.src = currentModel.phone_image || '';
+			setPhoneImage( currentModel.phone_image || '' );
 			setHidden( previewPlaceholder, true );
 
 			var skus = flattenSkus( currentModel );
@@ -206,8 +207,28 @@
 			applySkuTemplate();
 		}
 
+		function setPhoneImage( url ) {
+			phoneImage.src = url;
+			setHidden( phoneImage, ! url );
+		}
+
+		/**
+		 * Shows the SKU template over the photo and gives the preview box the template's aspect
+		 * ratio, which the server's placement math (scaled by width alone) assumes.
+		 */
 		function applySkuTemplate() {
-			previewTemplate.src = currentSku ? currentSku.base_map : '';
+			var request = ++templateRequest;
+			var url = currentSku ? currentSku.base_map : '';
+			previewTemplate.onload = null;
+			previewTemplate.src = url;
+			if ( ! url ) {
+				return;
+			}
+			previewTemplate.onload = function () {
+				if ( request === templateRequest && previewTemplate.naturalWidth ) {
+					previewBox.style.aspectRatio = previewTemplate.naturalWidth + ' / ' + previewTemplate.naturalHeight;
+				}
+			};
 		}
 
 		function resetPhoto() {
